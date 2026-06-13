@@ -328,7 +328,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="fg" style="margin-top:10px"><label>Mensagem</label><textarea id="modal-msg" style="min-height:110px"></textarea></div>
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeModal('modal-proto')">Cancelar</button>
-      <button class="btn-save" id="btn-send-proto" onclick="sendProto()"><i class="ti ti-send" style="font-size:13px;margin-right:4px"></i>Enviar e-mail</button>
+      <button class="btn-save" id="btn-send-proto" onclick="sendProto(currentProtoId)"><i class="ti ti-send" style="font-size:13px;margin-right:4px"></i>Enviar e-mail</button>
     </div>
   </div>
 </div>
@@ -376,7 +376,7 @@ button{font-family:inherit;cursor:pointer}
 const API='';
 let token=localStorage.getItem('lic_token')||'';
 let clientToken=localStorage.getItem('lic_client_token')||'';
-let currentUser=null,companies=[],editingId=null,protoId=null,renewId=null,currentFilter='all';
+let currentUser=null,companies=[],editingId=null,protoId=null,currentProtoId=null,renewId=null,currentFilter='all';
 
 async function api(method,path,body,tk){
   const t=tk||token;
@@ -635,14 +635,16 @@ function generatePDF(id){
 
 /* ── PROTOCOLO ── */
 function openProto(id){
-  const c=companies.find(x=>x.id===id);if(!c)return;protoId=id;
-  document.getElementById('modal-email').value=c.email_empresa;
+  const c=companies.find(x=>x.id===id);if(!c)return;protoId=id;currentProtoId=id;
+  document.getElementById('modal-email').value=c.email_empresa||'';
   document.getElementById('modal-msg').value=`Prezado(a),\n\nInformamos que a licença "${c.tipo||'licença'}" da empresa ${c.nome} foi protocolada junto ao órgão competente.\n\nQualquer dúvida, estamos à disposição.\n\nAtenciosamente,\nCherobin Assessoria Ambiental e Agrícola\nXanxerê SC`;
   document.getElementById('modal-proto').classList.add('open');
 }
-async function sendProto(){
-  if(!protoId)return;setLoading('btn-send-proto',true);
-  try{await api('POST','/notifications/proto/'+protoId,{message:document.getElementById('modal-msg').value});showToast('E-mail enviado!');closeModal('modal-proto');}
+async function sendProto(id){
+  const pid=id||protoId||currentProtoId;
+  if(!pid){showToast('Erro: empresa não identificada.',false);return;}
+  setLoading('btn-send-proto',true);
+  try{await api('POST','/notifications/proto/'+pid,{message:document.getElementById('modal-msg').value});showToast('E-mail enviado!');closeModal('modal-proto');}
   catch(e){showToast('Erro: '+e.message,false);}
   setLoading('btn-send-proto',false);
 }
