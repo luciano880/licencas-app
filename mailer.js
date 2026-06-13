@@ -46,7 +46,7 @@ function buildProtoHtml(company, customMsg) {
 function brevoSend({ to, subject, html }) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      sender: { name: 'Cherobin Assessoria', email: 'ae9b89001@smtp-brevo.com' },
+      sender: { name: 'Cherobin Assessoria', email: 'lucianopasini15@gmail.com' },
       to: [{ email: to }],
       subject,
       htmlContent: html,
