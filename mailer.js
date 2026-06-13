@@ -6,8 +6,8 @@ function getTransporter() {
   if (transporter) return transporter;
   transporter = nodemailer.createTransport({
     host:   'smtp-relay.brevo.com',
-    port:   587,
-    secure: false,
+    port:   465,
+    secure: true,
     auth: {
       user: 'ae9b89001@smtp-brevo.com',
       pass: process.env.BREVO_SMTP_KEY,
