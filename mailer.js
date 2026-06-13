@@ -1,7 +1,19 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
+let transporter = null;
+
+function getTransporter() {
+  if (transporter) return transporter;
+  transporter = nodemailer.createTransport({
+    host:   'smtp-relay.brevo.com',
+    port:   587,
+    secure: false,
+    auth: {
+      user: 'ae9b89001@smtp-brevo.com',
+      pass: process.env.BREVO_SMTP_KEY,
+    },
+  });
+  return transporter;
 }
 
 function monthsLeft(dateStr) {
@@ -50,24 +62,24 @@ function buildProtoHtml(company, customMsg) {
 }
 
 async function sendAlert(company) {
-  const resend = getResend();
+  const t = getTransporter();
   const m = monthsLeft(company.vencimento);
   const s = statusLabel(m);
-  await resend.emails.send({
-    from: process.env.MAIL_FROM || 'Cherobin Assessoria <onboarding@resend.dev>',
-    to:   company.email_interno,
+  await t.sendMail({
+    from:    process.env.MAIL_FROM || 'Cherobin Assessoria <ae9b89001@smtp-brevo.com>',
+    to:      company.email_interno,
     subject: `[${s.text}] Vencimento: ${company.nome} — ${new Date(company.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}`,
-    html: buildAlertHtml(company),
+    html:    buildAlertHtml(company),
   });
 }
 
 async function sendProto(company, customMsg) {
-  const resend = getResend();
-  await resend.emails.send({
-    from: process.env.MAIL_FROM || 'Cherobin Assessoria <onboarding@resend.dev>',
-    to:   company.email_empresa,
+  const t = getTransporter();
+  await t.sendMail({
+    from:    process.env.MAIL_FROM || 'Cherobin Assessoria <ae9b89001@smtp-brevo.com>',
+    to:      company.email_empresa,
     subject: `Licença protocolada — ${company.nome}`,
-    html: buildProtoHtml(company, customMsg),
+    html:    buildProtoHtml(company, customMsg),
   });
 }
 
