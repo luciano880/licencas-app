@@ -17,6 +17,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/companies',     require('./routes/companies'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/renewals',      require('./routes/renewals'));
+app.use('/api/clients',       require('./routes/clients'));
 
 /* Todas as rotas não-API servem o frontend */
 app.get('*', (req, res) => {
@@ -27,9 +29,9 @@ app.get('*', (req, res) => {
 const schedule = process.env.CRON_SCHEDULE || '0 8 * * *';
 cron.schedule(schedule, async () => {
   console.log('[cron] Verificando vencimentos —', new Date().toLocaleString('pt-BR'));
-  const companies = db.prepare(
+  const companies = await db.allAsync(
     "SELECT * FROM companies WHERE email_interno IS NOT NULL AND email_interno != ''"
-  ).all();
+  );
 
   const targets = companies.filter(c => monthsLeft(c.vencimento) <= 10);
   console.log(`[cron] ${targets.length} licença(s) para alertar.`);
