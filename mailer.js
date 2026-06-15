@@ -77,11 +77,19 @@ function brevoSend({ to, subject, html }) {
 async function sendAlert(company) {
   const m = monthsLeft(company.vencimento);
   const s = statusLabel(m);
-  await brevoSend({
-    to: company.email_interno,
-    subject: `[${s.text}] Vencimento: ${company.nome} — ${new Date(company.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}`,
-    html: buildAlertHtml(company),
-  });
+  const subject = `[${s.text}] Vencimento: ${company.nome} — ${new Date(company.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}`;
+  const html = buildAlertHtml(company);
+
+  // envia para o email interno da empresa cadastrada
+  if (company.email_interno) {
+    await brevoSend({ to: company.email_interno, subject, html });
+  }
+
+  // envia cópia para a Cherobin quando urgente (≤6 meses)
+  const alertEmail = process.env.ALERT_EMAIL;
+  if (alertEmail && m <= 6 && alertEmail !== company.email_interno) {
+    await brevoSend({ to: alertEmail, subject, html });
+  }
 }
 
 async function sendProto(company, customMsg) {
