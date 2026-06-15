@@ -459,7 +459,7 @@ function renderClientCards(list){
   el.innerHTML=list.map(c=>{
     const m=monthsLeft(c.vencimento),s=getStatus(m);
     const lbl=m<0?'Vencida':Math.round(m)+' meses';
-    const expDate=new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR');
+    const expDate=fmtDate(c.vencimento);
     return `<div class="ccard ${s}">
       <div class="ctop"><div class="cname">${c.nome}</div><span class="badge ${s}">${lbl}</span></div>
       ${c.cnpj?`<div class="cd"><i class="ti ti-id"></i>${c.cnpj}</div>`:''}
@@ -473,8 +473,8 @@ function renderClientRenewals(list){
   const el=document.getElementById('client-renewals');
   if(!list.length){el.innerHTML='<p style="font-size:13px;color:var(--text3)">Nenhuma renovação registrada ainda.</p>';return;}
   el.innerHTML=list.map(r=>{
-    const oldD=new Date(r.old_venc+'T12:00:00').toLocaleDateString('pt-BR');
-    const newD=new Date(r.new_venc+'T12:00:00').toLocaleDateString('pt-BR');
+    const oldD=fmtDate(r.old_venc);
+    const newD=fmtDate(r.new_venc);
     const dt=new Date(r.created_at).toLocaleDateString('pt-BR');
     return `<div class="history-item">
       <div>
@@ -487,7 +487,8 @@ function renderClientRenewals(list){
 }
 
 /* ── COMPANIES ── */
-function monthsLeft(d){return(new Date(d)-new Date())/(1000*60*60*24*30.44);}
+function fmtDate(d){if(!d)return'—';const s=String(d).slice(0,10);return new Date(s+'T12:00:00').toLocaleDateString('pt-BR');}
+function monthsLeft(d){if(!d)return-999;const s=String(d).slice(0,10);return(new Date(s+'T12:00:00')-new Date())/(1000*60*60*24*30.44);}
 function getStatus(m){return m>10?'green':m>6?'yellow':'red';}
 
 async function loadCompanies(){try{companies=await api('GET','/companies');renderCards();}catch(e){showToast('Erro: '+e.message,false);}}
@@ -501,7 +502,7 @@ function renderCards(){
   container.innerHTML=list.map(c=>{
     const m=monthsLeft(c.vencimento),s=getStatus(m);
     const lbl=m<0?'Vencida':Math.round(m)+' meses';
-    const expDate=new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR');
+    const expDate=fmtDate(c.vencimento);
     return `<div class="ccard ${s}">
       <div class="ctop"><div class="cname">${c.nome}</div><span class="badge ${s}">${lbl}</span></div>
       <div class="cd"><i class="ti ti-id"></i>${c.cnpj||'—'}</div>
@@ -564,7 +565,7 @@ function clearForm(){
 function openRenew(id){
   const c=companies.find(x=>x.id===id);if(!c)return;renewId=id;
   document.getElementById('renew-company-name').value=c.nome;
-  document.getElementById('renew-old-venc').value=new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR');
+  document.getElementById('renew-old-venc').value=fmtDate(c.vencimento);
   document.getElementById('renew-new-venc').value='';
   document.getElementById('renew-obs').value='';
   document.getElementById('modal-renew').classList.add('open');
@@ -590,8 +591,8 @@ async function openHistory(id){
     if(!rows.length){el.innerHTML='<p style="font-size:13px;color:var(--text3)">Nenhuma renovação registrada para esta empresa.</p>';return;}
     el.innerHTML=`<p style="font-size:13px;font-weight:600;color:var(--g1);margin-bottom:10px">${c?.nome||''}</p>`+
       rows.map(r=>{
-        const oldD=new Date(r.old_venc+'T12:00:00').toLocaleDateString('pt-BR');
-        const newD=new Date(r.new_venc+'T12:00:00').toLocaleDateString('pt-BR');
+        const oldD=fmtDate(r.old_venc);
+        const newD=fmtDate(r.new_venc);
         const dt=new Date(r.created_at).toLocaleDateString('pt-BR');
         return `<div class="history-item">
           <div>
@@ -611,7 +612,7 @@ function generatePDF(id){
   const doc=new jsPDF();
   const m=monthsLeft(c.vencimento);
   const s=m>10?'EM DIA':m>6?'ATENÇÃO':'URGENTE';
-  const expDate=new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR');
+  const expDate=fmtDate(c.vencimento);
   const hoje=new Date().toLocaleDateString('pt-BR');
 
   doc.setFillColor(26,77,46);doc.rect(0,0,210,32,'F');
@@ -713,7 +714,7 @@ function renderNotifyList(){
   el.innerHTML=`<p style="font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:500">Licenças que receberão alertas:</p>`+
     list.map(c=>{
       const m=monthsLeft(c.vencimento),s=getStatus(m);
-      const expDate=new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR');
+      const expDate=fmtDate(c.vencimento);
       return `<div class="notify-item">
         <div><div style="font-size:14px;font-weight:700;color:var(--g1)">${c.nome}</div>
         <div style="font-size:12px;color:var(--text2)">Vence: ${expDate} · Alerta: ${c.email_interno||'<em>sem e-mail</em>'}</div></div>
