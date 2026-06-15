@@ -259,6 +259,16 @@ button{font-family:inherit;cursor:pointer}
           <div class="fg"><label>CNPJ</label><input type="text" id="f-cnpj" placeholder="00.000.000/0001-00" maxlength="18"></div>
           <div class="fg"><label>Tipo de licença</label><input type="text" id="f-tipo" placeholder="Alvará Sanitário, CNES..."></div>
           <div class="fg"><label>Vencimento *</label><input type="date" id="f-venc"></div>
+          <div class="fg" style="position:relative">
+            <label>Estado</label>
+            <input type="text" id="f-estado" placeholder="Digite o estado..." autocomplete="off" oninput="searchEstado(this.value)">
+            <div id="f-estado-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);max-height:180px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+          </div>
+          <div class="fg" style="position:relative">
+            <label>Cidade</label>
+            <input type="text" id="f-cidade" placeholder="Selecione o estado primeiro..." autocomplete="off" oninput="searchCidade(this.value)" disabled>
+            <div id="f-cidade-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);max-height:180px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+          </div>
           <div class="fg"><label>E-mail da empresa (protocolo)</label><input type="email" id="f-email-emp" placeholder="contato@empresa.com.br"></div>
           <div class="fg"><label>E-mail interno (alertas)</label><input type="email" id="f-email-int" placeholder="seuemail@cherobin.com.br"></div>
           <div class="fg full"><label>Observações</label><textarea id="f-obs" placeholder="Número do protocolo, responsável..."></textarea></div>
@@ -523,7 +533,7 @@ function updateSummary(){
 async function saveCompany(){
   const nome=document.getElementById('f-nome').value.trim(),vencimento=document.getElementById('f-venc').value;
   if(!nome||!vencimento){showToast('Preencha nome e vencimento.',false);return;}
-  const body={nome,cnpj:document.getElementById('f-cnpj').value.trim(),tipo:document.getElementById('f-tipo').value.trim(),vencimento,email_empresa:document.getElementById('f-email-emp').value.trim(),email_interno:document.getElementById('f-email-int').value.trim(),obs:document.getElementById('f-obs').value.trim()};
+  const body={nome,cnpj:document.getElementById('f-cnpj').value.trim(),tipo:document.getElementById('f-tipo').value.trim(),vencimento,estado:document.getElementById('f-estado').value.trim(),cidade:document.getElementById('f-cidade').value.trim(),email_empresa:document.getElementById('f-email-emp').value.trim(),email_interno:document.getElementById('f-email-int').value.trim(),obs:document.getElementById('f-obs').value.trim()};
   setLoading('btn-save',true);
   try{if(editingId){await api('PUT','/companies/'+editingId,body);editingId=null;}else{await api('POST','/companies',body);}clearForm();await loadCompanies();showTab('list');showToast('Empresa salva!');}
   catch(e){showToast('Erro: '+e.message,false);}
@@ -533,6 +543,8 @@ function editCompany(id){
   const c=companies.find(x=>x.id===id);if(!c)return;editingId=id;
   document.getElementById('f-nome').value=c.nome;document.getElementById('f-cnpj').value=c.cnpj||'';
   document.getElementById('f-tipo').value=c.tipo||'';document.getElementById('f-venc').value=c.vencimento;
+  document.getElementById('f-estado').value=c.estado||'';
+  if(c.estado){loadCidades(c.estado,c.cidade||'');}
   document.getElementById('f-email-emp').value=c.email_empresa||'';document.getElementById('f-email-int').value=c.email_interno||'';
   document.getElementById('f-obs').value=c.obs||'';document.getElementById('edit-banner').style.display='block';showTab('add');
 }
@@ -543,7 +555,8 @@ async function deleteCompany(id){
   catch(e){showToast('Erro: '+e.message,false);}
 }
 function clearForm(){
-  ['f-nome','f-cnpj','f-tipo','f-venc','f-email-emp','f-email-int','f-obs'].forEach(id=>document.getElementById(id).value='');
+  ['f-nome','f-cnpj','f-tipo','f-venc','f-estado','f-cidade','f-email-emp','f-email-int','f-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-cidade').disabled=true;
   editingId=null;document.getElementById('edit-banner').style.display='none';
 }
 
@@ -729,6 +742,67 @@ function showTab(tab){
   if(tab==='notify')renderNotifyList();if(tab==='list')renderCards();if(tab==='settings')loadUsers();
 }
 function setFilter(f,btn){currentFilter=f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderCards();}
+
+/* ── ESTADO / CIDADE IBGE ── */
+let _estados=[],_cidades=[],_estadoSel=null;
+
+async function loadEstados(){
+  if(_estados.length)return;
+  try{
+    const r=await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+    _estados=await r.json();
+  }catch(e){_estados=[];}
+}
+
+function showList(listId,items,onSelect){
+  const el=document.getElementById(listId);
+  if(!items.length){el.style.display='none';return;}
+  el.innerHTML=items.slice(0,8).map(i=>`<div onclick="(${onSelect.toString()})(${JSON.stringify(i)})" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">${i.label}</div>`).join('');
+  el.style.display='block';
+}
+
+async function searchEstado(val){
+  await loadEstados();
+  document.getElementById('f-estado-list').style.display='none';
+  if(!val.trim()){return;}
+  const q=val.toLowerCase();
+  const matches=_estados.filter(e=>e.nome.toLowerCase().includes(q)||e.sigla.toLowerCase().includes(q)).map(e=>({label:`${e.nome} (${e.sigla})`,id:e.id,sigla:e.sigla,nome:e.nome}));
+  showList('f-estado-list',matches,function(e){
+    document.getElementById('f-estado').value=e.nome+' ('+e.sigla+')';
+    document.getElementById('f-estado-list').style.display='none';
+    loadCidades(e.id,null);
+  });
+}
+
+async function loadCidades(estadoId,cidadeSel){
+  _estadoSel=estadoId;
+  _cidades=[];
+  const cidadeInput=document.getElementById('f-cidade');
+  cidadeInput.disabled=true;cidadeInput.value='Carregando...';
+  try{
+    const r=await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estadoId}/municipios?orderBy=nome`);
+    _cidades=await r.json();
+    cidadeInput.disabled=false;
+    cidadeInput.value=cidadeSel||'';
+    cidadeInput.placeholder='Digite a cidade...';
+  }catch(e){cidadeInput.value='';cidadeInput.disabled=false;}
+}
+
+function searchCidade(val){
+  document.getElementById('f-cidade-list').style.display='none';
+  if(!val.trim()||!_cidades.length)return;
+  const q=val.toLowerCase();
+  const matches=_cidades.filter(c=>c.nome.toLowerCase().includes(q)).map(c=>({label:c.nome,id:c.id,nome:c.nome}));
+  showList('f-cidade-list',matches,function(c){
+    document.getElementById('f-cidade').value=c.nome;
+    document.getElementById('f-cidade-list').style.display='none';
+  });
+}
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#f-estado')&&!e.target.closest('#f-estado-list'))document.getElementById('f-estado-list').style.display='none';
+  if(!e.target.closest('#f-cidade')&&!e.target.closest('#f-cidade-list'))document.getElementById('f-cidade-list').style.display='none';
+});
 
 /* ── CNPJ MASK ── */
 document.getElementById('f-cnpj').addEventListener('input',function(){
