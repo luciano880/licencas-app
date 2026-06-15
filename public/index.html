@@ -754,29 +754,38 @@ async function loadEstados(){
   }catch(e){_estados=[];}
 }
 
+let _estadoMatches=[],_cidadeMatches=[];
+
 function showList(listId,items,onSelect){
   const el=document.getElementById(listId);
   if(!items.length){el.style.display='none';return;}
-  el.innerHTML=items.slice(0,8).map(i=>`<div onclick="(${onSelect.toString()})(${JSON.stringify(i)})" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">${i.label}</div>`).join('');
+  el.innerHTML='';
+  items.slice(0,10).forEach((item,i)=>{
+    const div=document.createElement('div');
+    div.textContent=item.label;
+    div.style.cssText='padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)';
+    div.addEventListener('mousedown',function(e){e.preventDefault();onSelect(item);});
+    div.addEventListener('mouseover',function(){this.style.background='var(--bg2)';});
+    div.addEventListener('mouseout',function(){this.style.background='';});
+    el.appendChild(div);
+  });
   el.style.display='block';
 }
 
 async function searchEstado(val){
   await loadEstados();
-  document.getElementById('f-estado-list').style.display='none';
-  if(!val.trim()){return;}
+  if(!val.trim()){document.getElementById('f-estado-list').style.display='none';return;}
   const q=val.toLowerCase();
-  const matches=_estados.filter(e=>e.nome.toLowerCase().includes(q)||e.sigla.toLowerCase().includes(q)).map(e=>({label:`${e.nome} (${e.sigla})`,id:e.id,sigla:e.sigla,nome:e.nome}));
-  showList('f-estado-list',matches,function(e){
-    document.getElementById('f-estado').value=e.nome+' ('+e.sigla+')';
+  _estadoMatches=_estados.filter(e=>e.nome.toLowerCase().includes(q)||e.sigla.toLowerCase().includes(q)).map(e=>({label:`${e.nome} (${e.sigla})`,id:e.id,sigla:e.sigla,nome:e.nome}));
+  showList('f-estado-list',_estadoMatches,function(e){
+    document.getElementById('f-estado').value=`${e.nome} (${e.sigla})`;
     document.getElementById('f-estado-list').style.display='none';
     loadCidades(e.id,null);
   });
 }
 
 async function loadCidades(estadoId,cidadeSel){
-  _estadoSel=estadoId;
-  _cidades=[];
+  _estadoSel=estadoId;_cidades=[];
   const cidadeInput=document.getElementById('f-cidade');
   cidadeInput.disabled=true;cidadeInput.value='Carregando...';
   try{
@@ -789,11 +798,10 @@ async function loadCidades(estadoId,cidadeSel){
 }
 
 function searchCidade(val){
-  document.getElementById('f-cidade-list').style.display='none';
-  if(!val.trim()||!_cidades.length)return;
+  if(!val.trim()||!_cidades.length){document.getElementById('f-cidade-list').style.display='none';return;}
   const q=val.toLowerCase();
-  const matches=_cidades.filter(c=>c.nome.toLowerCase().includes(q)).map(c=>({label:c.nome,id:c.id,nome:c.nome}));
-  showList('f-cidade-list',matches,function(c){
+  _cidadeMatches=_cidades.filter(c=>c.nome.toLowerCase().includes(q)).map(c=>({label:c.nome,nome:c.nome}));
+  showList('f-cidade-list',_cidadeMatches,function(c){
     document.getElementById('f-cidade').value=c.nome;
     document.getElementById('f-cidade-list').style.display='none';
   });
