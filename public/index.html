@@ -508,6 +508,7 @@ function renderCards(){
       <div class="cd"><i class="ti ti-id"></i>${c.cnpj||'—'}</div>
       ${c.tipo?`<div class="cd"><i class="ti ti-certificate"></i>${c.tipo}</div>`:''}
       <div class="cd"><i class="ti ti-calendar"></i>Vence: ${expDate}</div>
+      ${(c.cidade||c.estado)?`<div class="cd"><i class="ti ti-map-pin"></i>${[c.cidade,c.estado].filter(Boolean).join(' — ')}</div>`:''}
       ${c.email_empresa?`<div class="cd"><i class="ti ti-mail"></i>${c.email_empresa}</div>`:''}
       ${c.obs?`<div class="cd" style="font-style:italic"><i class="ti ti-notes"></i>${c.obs}</div>`:''}
       <div class="cact">
