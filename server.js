@@ -19,6 +19,7 @@ app.use('/api/companies',     require('./routes/companies'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/renewals',      require('./routes/renewals'));
 app.use('/api/clients',       require('./routes/clients'));
+app.use('/api/backup',        require('./routes/backup'));
 
 /* Todas as rotas não-API servem o frontend */
 app.get('*', (req, res) => {

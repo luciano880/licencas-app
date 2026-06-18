@@ -304,6 +304,18 @@ button{font-family:inherit;cursor:pointer}
           </div>
           <button class="btn-save" style="width:auto;padding:8px 20px" onclick="changePassword()"><i class="ti ti-lock-check" style="font-size:13px;margin-right:4px"></i>Alterar senha</button>
         </div>
+        <div class="settings-section">
+          <h3><i class="ti ti-database"></i>Backup de dados</h3>
+          <p style="font-size:13px;color:var(--text3);margin-bottom:12px">Baixe um arquivo de backup com todas as empresas cadastradas, ou restaure a partir de um backup anterior.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-save" style="width:auto;padding:8px 18px" onclick="downloadBackup()"><i class="ti ti-download" style="font-size:13px;margin-right:4px"></i>Baixar backup</button>
+            <label class="btn-ghost" style="cursor:pointer;padding:8px 18px;display:inline-flex;align-items:center;gap:6px;border-radius:var(--r);font-size:13px;font-weight:600;border:1.5px solid var(--border)">
+              <i class="ti ti-upload" style="font-size:13px"></i>Restaurar backup
+              <input type="file" accept=".json" style="display:none" onchange="uploadBackup(this)">
+            </label>
+          </div>
+          <div id="backup-msg" style="margin-top:10px;font-size:13px"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -518,7 +530,7 @@ function renderCards(){
         <button class="cbtn" onclick="generatePDF(${c.id})"><i class="ti ti-file-type-pdf" style="font-size:11px"></i>PDF</button>
         <button class="cbtn" onclick="openClientAccess(${c.id})"><i class="ti ti-user-check" style="font-size:11px"></i>Cliente</button>
         ${c.email_empresa?`<button class="cbtn" onclick="openProto(${c.id})"><i class="ti ti-send" style="font-size:11px"></i>Protocolo</button>`:''}
-        <button class="cbtn danger" onclick="deleteCompany(${c.id})"><i class="ti ti-trash" style="font-size:11px"></i></button>
+        <button class="cbtn danger" onclick="deleteCompany(${c.id})"><i class="ti ti-trash" style="font-size:11px"></i>Excluir</button>
       </div>
     </div>`;
   }).join('');
@@ -699,6 +711,32 @@ async function deleteClientAccess(clientId){
   if(!confirm('Remover acesso do cliente?'))return;
   try{await api('DELETE','/clients/'+clientId);closeModal('modal-client-access');showToast('Acesso removido.');}
   catch(e){showToast('Erro: '+e.message,false);}
+}
+
+/* ── BACKUP ── */
+async function downloadBackup(){
+  try{
+    const data=await api('GET','/backup');
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;
+    a.download=`backup-cherobin-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();URL.revokeObjectURL(url);
+    showToast('Backup baixado!');
+  }catch(e){showToast('Erro: '+e.message,false);}
+}
+async function uploadBackup(input){
+  const file=input.files[0];if(!file)return;
+  const msg=document.getElementById('backup-msg');
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    if(!confirm(`Restaurar ${data.companies?.length||0} empresa(s)? Isso NÃO apaga os dados existentes — apenas adiciona os do backup.`)){input.value='';return;}
+    const r=await api('POST','/backup/restore',data);
+    msg.style.color='var(--g1)';msg.textContent=`✔ ${r.inserted} empresa(s) restaurada(s).`;
+    await loadCompanies();showToast('Backup restaurado!');
+  }catch(e){msg.style.color='#b91c1c';msg.textContent='Erro: '+e.message;}
+  input.value='';
 }
 
 /* ── NOTIFICATIONS ── */
