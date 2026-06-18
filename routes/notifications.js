@@ -3,6 +3,25 @@ const db     = require('../database');
 const authMw = require('../middleware/auth');
 const { sendAlert, sendProto, monthsLeft } = require('../mailer');
 
+/* GET /api/notifications/cron?key=CRON_SECRET — chamado pelo cron-job.org */
+router.get('/cron', async (req, res) => {
+  if (req.query.key !== process.env.CRON_SECRET)
+    return res.status(401).json({ error: 'Não autorizado.' });
+  try {
+    const companies = await db.allAsync(
+      "SELECT * FROM companies WHERE email_interno IS NOT NULL AND email_interno <> ''"
+    );
+    const targets = companies.filter(c => monthsLeft(c.vencimento) <= 10);
+    const results = [];
+    for (const c of targets) {
+      try { await sendAlert(c); results.push({ nome: c.nome, ok: true }); }
+      catch (err) { results.push({ nome: c.nome, ok: false, error: err.message }); }
+    }
+    console.log('[cron-ext] Alertas enviados:', results);
+    res.json({ sent: results.filter(r => r.ok).length, total: targets.length, results });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.use(authMw);
 
 /* POST /api/notifications/alerts */
